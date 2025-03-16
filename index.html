@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Click the Citrus</title>
+  <style>
+    body {
+      text-align: center;
+      font-family: Arial, sans-serif;
+      background-color: #f0f0f0;
+    }
+    canvas {
+      border: 1px solid #000;
+      background-color: #fff;
+      margin-top: 20px;
+    }
+    #scoreDisplay, #timerDisplay, #gameMessage {
+      font-size: 20px;
+      margin: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Click the Citrus</h1>
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+  <div id="scoreDisplay">Score: 0</div>
+  <div id="timerDisplay">Time Left: 30s</div>
+  <div id="gameMessage"></div>
+  
+  <script>
+    // Lists of fruits
+    const citrus = ['orange', 'lemon', 'lime', 'grapefruit'];
+    const nonCitrus = ['grape', 'pear', 'banana', 'apple', 'cherry'];
+    const allFruits = citrus.concat(nonCitrus);
+    
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    
+    let score = 0;
+    let startTime;
+    const gameDuration = 30; // seconds
+    let gameOver = false;
+    let fruits = [];
+    
+    class Fruit {
+      constructor(name, x, y) {
+        this.name = name;
+        this.x = x;
+        this.y = y;
+        this.size = 70;
+        // Random speed: here we use 1 (with random direction)
+        this.vx = (Math.random() < 0.5 ? -1 : 1);
+        this.vy = (Math.random() < 0.5 ? -1 : 1);
+        this.img = new Image();
+        this.img.src = `assets/${name}.png`;
+      }
+      
+      draw() {
+        ctx.drawImage(this.img, this.x, this.y, this.size, this.size);
+      }
+      
+      move() {
+        this.x += this.vx;
+        this.y += this.vy;
+        // Bounce off the canvas edges
+        if (this.x < 0 || this.x + this.size > canvas.width) {
+          this.vx = -this.vx;
+        }
+        if (this.y < 0 || this.y + this.size > canvas.height) {
+          this.vy = -this.vy;
+        }
+      }
+      
+      clicked(mouseX, mouseY) {
+        return (mouseX >= this.x && mouseX <= this.x + this.size &&
+                mouseY >= this.y && mouseY <= this.y + this.size);
+      }
+    }
+    
+    // Initialize game objects
+    function initGame() {
+      score = 0;
+      gameOver = false;
+      startTime = Date.now();
+      fruits = [];
+      for (let i = 0; i < 10; i++) {
+        const name = allFruits[Math.floor(Math.random() * allFruits.length)];
+        const x = Math.random() * (canvas.width - 120) + 50;
+        const y = Math.random() * (canvas.height - 120) + 50;
+        fruits.push(new Fruit(name, x, y));
+      }
+      document.getElementById('gameMessage').innerText = "";
+    }
+    
+    // The game loop, using requestAnimationFrame
+    function gameLoop() {
+      if (gameOver) return;
+      const elapsed = (Date.now() - startTime) / 1000;
+      const timeLeft = Math.max(0, gameDuration - elapsed);
+      
+      // End game if time is up
+      if (timeLeft <= 0) {
+        gameOver = true;
+        document.getElementById('gameMessage').innerText = "Game Over! Press R to Restart";
+      }
+      
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Update score and timer displays
+      document.getElementById('scoreDisplay').innerText = `Score: ${score}`;
+      document.getElementById('timerDisplay').innerText = `Time Left: ${Math.floor(timeLeft)}s`;
+      
+      // Update and draw all fruits
+      fruits.forEach(fruit => {
+        fruit.move();
+        fruit.draw();
+      });
+      
+      requestAnimationFrame(gameLoop);
+    }
+    
+    // Start game on first click; also display instructions initially.
+    window.onload = function() {
+      // Display initial instructions
+      ctx.fillStyle = "#0000FF";
+      ctx.font = "30px Arial";
+      const instructions = [
+        "Click the Citrus!",
+        "Tap citrus fruits (+1)",
+        "Avoid non-citrus (-1)",
+        "30s time limit",
+        "Click to start"
+      ];
+      instructions.forEach((line, index) => {
+        ctx.fillText(line, 50, 100 + index * 40);
+      });
+      
+      // Wait for initial click to start
+      canvas.addEventListener('click', startGameOnce, { once: true });
+    };
+    
+    function startGameOnce() {
+      initGame();
+      requestAnimationFrame(gameLoop);
+    }
+    
+    // Handle canvas click events for fruit selection
+    canvas.addEventListener('click', function(event) {
+      if (gameOver) return;
+      const rect = canvas.getBoundingClientRect();
+      const mouseX = event.clientX - rect.left;
+      const mouseY = event.clientY - rect.top;
+      
+      fruits.forEach(fruit => {
+        if (fruit.clicked(mouseX, mouseY)) {
+          if (citrus.includes(fruit.name)) {
+            score += 1;
+          } else {
+            score -= 1;
+          }
+        }
+      });
+    });
+    
+    // Listen for the "R" key to restart the game
+    document.addEventListener('keydown', function(event) {
+      if (event.key.toLowerCase() === 'r') {
+        initGame();
+        requestAnimationFrame(gameLoop);
+      }
+    });
+  </script>
+</body>
+</html>
